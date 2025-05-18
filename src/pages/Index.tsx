@@ -1,12 +1,35 @@
-// Update this page (the content is just a fallback if you fail to update the page)
 
-const Index = () => {
+import React, { useRef } from 'react';
+import Header from '@/components/Header';
+import Hero from '@/components/Hero';
+import PricingCalculator from '@/components/PricingCalculator';
+import Testimonial from '@/components/Testimonial';
+import Footer from '@/components/Footer';
+
+const Index: React.FC = () => {
+  const calculatorRef = useRef<HTMLDivElement>(null);
+  
+  const scrollToCalculator = () => {
+    calculatorRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+  
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">Start building your amazing project here!</p>
-      </div>
+    <div className="flex flex-col min-h-screen">
+      <Header />
+      
+      <main className="flex-grow">
+        <div className="container max-w-7xl mx-auto px-4 space-y-10 md:space-y-16">
+          <Hero onCalculatorClick={scrollToCalculator} />
+          
+          <div id="calculator" ref={calculatorRef} className="scroll-mt-24">
+            <PricingCalculator />
+          </div>
+          
+          <Testimonial />
+        </div>
+      </main>
+      
+      <Footer />
     </div>
   );
 };
