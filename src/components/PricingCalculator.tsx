@@ -6,18 +6,23 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import InfoTooltip from './InfoTooltip';
-import { modelOptions, contextWindowOptions, ModelPricing } from '@/data/modelData';
-import { Calculator } from 'lucide-react';
+import { modelOptions, contextWindowOptions, ModelPricing, presetOptions, PresetOption } from '@/data/modelData';
+import { Calculator, Users, MessageSquare, CircleInfo, DollarSign, Check, TrendingUp, BarChart2, CircleDot } from 'lucide-react';
+
+// Conversion factor from words to tokens (approximate)
+const WORDS_TO_TOKENS_FACTOR = 1.3;
 
 const PricingCalculator: React.FC = () => {
   // Form state
   const [selectedModel, setSelectedModel] = useState<ModelPricing>(modelOptions[0]);
   const [monthlyUsers, setMonthlyUsers] = useState<number>(100);
   const [promptsPerUser, setPromptsPerUser] = useState<number>(10);
-  const [inputTokensPerPrompt, setInputTokensPerPrompt] = useState<number>(200);
-  const [outputTokensPerPrompt, setOutputTokensPerPrompt] = useState<number>(800);
+  const [responseLength, setResponseLength] = useState<number>(500);
+  const [inputLength, setInputLength] = useState<number>(200);
+  const [outputLength, setOutputLength] = useState<number>(800);
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [contextWindow, setContextWindow] = useState<string>("8k");
+  const [selectedPreset, setSelectedPreset] = useState<string>("custom");
   
   // Results state
   const [totalTokensPerMonth, setTotalTokensPerMonth] = useState<number>(0);
@@ -25,13 +30,48 @@ const PricingCalculator: React.FC = () => {
   const [costPerUser, setCostPerUser] = useState<number>(0);
   const [minimumPrice, setMinimumPrice] = useState<number>(0);
   const [suggestedStrategy, setSuggestedStrategy] = useState<string>("");
+  const [breakEvenUsers, setBreakEvenUsers] = useState<number>(0);
+  const [roi, setRoi] = useState<number>(0);
+  
+  // Apply preset configuration
+  const applyPreset = (presetId: string) => {
+    const preset = presetOptions.find(p => p.id === presetId);
+    if (!preset) return;
+    
+    setSelectedPreset(presetId);
+    
+    // Apply preset values
+    const model = modelOptions.find(m => m.id === preset.model);
+    if (model) setSelectedModel(model);
+    
+    setMonthlyUsers(preset.monthlyUsers);
+    setPromptsPerUser(preset.promptsPerUser);
+    setResponseLength(preset.responseLength);
+    setInputLength(preset.inputLength);
+    setOutputLength(preset.outputLength);
+    setContextWindow(preset.contextWindow);
+  };
   
   // Calculate results whenever inputs change
   useEffect(() => {
     if (!selectedModel) return;
     
-    const inputTotal = monthlyUsers * promptsPerUser * inputTokensPerPrompt;
-    const outputTotal = monthlyUsers * promptsPerUser * outputTokensPerPrompt;
+    let inputTokens, outputTokens;
+    
+    if (showAdvanced) {
+      // Use the specific input and output lengths
+      inputTokens = inputLength * WORDS_TO_TOKENS_FACTOR;
+      outputTokens = outputLength * WORDS_TO_TOKENS_FACTOR;
+    } else {
+      // When using simplified interface, we use response length
+      // and estimate input/output proportions (20% input, 80% output typically)
+      const totalTokens = responseLength * WORDS_TO_TOKENS_FACTOR;
+      inputTokens = totalTokens * 0.2;
+      outputTokens = totalTokens * 0.8;
+    }
+    
+    const inputTotal = monthlyUsers * promptsPerUser * inputTokens;
+    const outputTotal = monthlyUsers * promptsPerUser * outputTokens;
     const totalTokens = inputTotal + outputTotal;
     
     const inputCost = (inputTotal / 1000) * selectedModel.inputPrice;
@@ -43,21 +83,34 @@ const PricingCalculator: React.FC = () => {
     // Suggested minimum price with 40% margin
     const suggestedPrice = userCost * 1.4;
     
+    // Calculate ROI (Return on Investment)
+    const estimatedRoi = (suggestedPrice / userCost - 1) * 100;
+    
+    // Calculate break-even point (users needed to cover costs)
+    // Assuming fixed costs of $100 per month for hosting, etc.
+    const fixedCosts = 100;
+    const revenuePerUser = suggestedPrice;
+    const variableCostPerUser = userCost;
+    const contributionMargin = revenuePerUser - variableCostPerUser;
+    const breakEven = contributionMargin > 0 ? Math.ceil(fixedCosts / contributionMargin) : 0;
+    
     setTotalTokensPerMonth(totalTokens);
     setMonthlyCost(totalCost);
     setCostPerUser(userCost);
     setMinimumPrice(suggestedPrice);
+    setRoi(estimatedRoi);
+    setBreakEvenUsers(breakEven);
     
     // Determine pricing strategy based on usage pattern
     if (promptsPerUser < 5) {
-      setSuggestedStrategy("Flat Rate");
+      setSuggestedStrategy("Flat Pricing");
     } else if (promptsPerUser >= 5 && promptsPerUser < 20) {
       setSuggestedStrategy("Tiered Pricing");
     } else {
       setSuggestedStrategy("Usage-based Pricing");
     }
     
-  }, [selectedModel, monthlyUsers, promptsPerUser, inputTokensPerPrompt, outputTokensPerPrompt]);
+  }, [selectedModel, monthlyUsers, promptsPerUser, responseLength, inputLength, outputLength, showAdvanced]);
   
   return (
     <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
@@ -69,15 +122,36 @@ const PricingCalculator: React.FC = () => {
             <span>AI Cost Calculator</span>
           </CardTitle>
           <CardDescription>
-            Enter your usage estimates to calculate costs
+            Fill in a few details about your app to see costs
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Preset Templates Dropdown */}
+          <div className="space-y-2">
+            <Label htmlFor="preset" className="flex items-center">
+              <CircleDot className="h-4 w-4 mr-1.5 inline text-theme-blue-500" />
+              Or choose a template to auto-fill your numbers:
+            </Label>
+            <Select
+              value={selectedPreset}
+              onValueChange={applyPreset}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a preset" />
+              </SelectTrigger>
+              <SelectContent>
+                {presetOptions.map((preset) => (
+                  <SelectItem key={preset.id} value={preset.id}>{preset.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
           {/* Model Dropdown */}
           <div className="space-y-2">
             <Label htmlFor="model">
-              Which AI model are you using?
-              <InfoTooltip content="Different models have different pricing structures and capabilities. Select the one you're currently using or planning to use." />
+              What type of AI model do you use?
+              <InfoTooltip content="Different models have different capabilities and costs. Select the one you're planning to use in your app." />
             </Label>
             <Select
               value={selectedModel.id}
@@ -91,20 +165,26 @@ const PricingCalculator: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 {modelOptions.map((model) => (
-                  <SelectItem key={model.id} value={model.id}>{model.name}</SelectItem>
+                  <SelectItem key={model.id} value={model.id}>
+                    <div className="flex flex-col">
+                      <span>{model.name}</span>
+                      <span className="text-xs text-muted-foreground">{model.description}</span>
+                    </div>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground mt-1">
-              {selectedModel.name} pricing: ${selectedModel.inputPrice.toFixed(4)} per 1K input tokens, ${selectedModel.outputPrice.toFixed(4)} per 1K output tokens
+              {selectedModel.name} pricing: ${selectedModel.inputPrice.toFixed(4)} per 1K input words, ${selectedModel.outputPrice.toFixed(4)} per 1K output words
             </p>
           </div>
           
           {/* Monthly Users */}
           <div className="space-y-2">
-            <Label htmlFor="users">
-              Monthly Active Users
-              <InfoTooltip content="The number of unique users who will interact with your AI features each month." />
+            <Label htmlFor="users" className="flex items-center">
+              <Users className="h-4 w-4 mr-1.5 inline text-theme-blue-500" />
+              How many people use your app monthly?
+              <InfoTooltip content="This is the number of unique users who will interact with your AI features each month." />
             </Label>
             <Input
               id="users"
@@ -113,14 +193,15 @@ const PricingCalculator: React.FC = () => {
               value={monthlyUsers}
               onChange={(e) => setMonthlyUsers(Math.max(1, parseInt(e.target.value) || 0))}
               className="w-full"
+              placeholder="e.g. 1,000"
             />
           </div>
           
           {/* Prompts Per User */}
           <div className="space-y-2">
             <Label htmlFor="prompts">
-              Average Prompts Per User/Month
-              <InfoTooltip content="How many times each user will interact with the AI model in a month." />
+              How often does one person use the AI in your app (per month)?
+              <InfoTooltip content="How many times each user will ask the AI for something in a month. Each time counts as one prompt." />
             </Label>
             <Input
               id="prompts"
@@ -129,41 +210,32 @@ const PricingCalculator: React.FC = () => {
               value={promptsPerUser}
               onChange={(e) => setPromptsPerUser(Math.max(1, parseInt(e.target.value) || 0))}
               className="w-full"
+              placeholder="e.g. 50 times"
             />
           </div>
           
-          {/* Tokens Per Prompt */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Response Length */}
+          {!showAdvanced && (
             <div className="space-y-2">
-              <Label htmlFor="input-tokens">
-                Input Tokens/Prompt
-                <InfoTooltip content="Average number of tokens in the user's input messages. A token is roughly 4 characters or 3/4 of a word." />
+              <Label htmlFor="response-length" className="flex items-center">
+                <MessageSquare className="h-4 w-4 mr-1.5 inline text-theme-blue-500" />
+                Average words per AI response
+                <InfoTooltip content="How long are typical AI responses in your app? This helps us estimate token usage." />
               </Label>
               <Input
-                id="input-tokens"
+                id="response-length"
                 type="number"
                 min="1"
-                value={inputTokensPerPrompt}
-                onChange={(e) => setInputTokensPerPrompt(Math.max(1, parseInt(e.target.value) || 0))}
+                value={responseLength}
+                onChange={(e) => setResponseLength(Math.max(1, parseInt(e.target.value) || 0))}
                 className="w-full"
+                placeholder="e.g. 300"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                This typically converts to around {Math.round(responseLength * WORDS_TO_TOKENS_FACTOR)} tokens per response
+              </p>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="output-tokens">
-                Output Tokens/Prompt
-                <InfoTooltip content="Average number of tokens in the AI's response. Output tokens are typically more expensive than input tokens." />
-              </Label>
-              <Input
-                id="output-tokens"
-                type="number"
-                min="1"
-                value={outputTokensPerPrompt}
-                onChange={(e) => setOutputTokensPerPrompt(Math.max(1, parseInt(e.target.value) || 0))}
-                className="w-full"
-              />
-            </div>
-          </div>
+          )}
           
           {/* Advanced Toggle */}
           <div className="flex items-center space-x-2 pt-2">
@@ -178,21 +250,59 @@ const PricingCalculator: React.FC = () => {
           {/* Advanced Options */}
           {showAdvanced && (
             <div className="space-y-4 pt-2 animate-fade-in">
+              {/* Input & Output Length */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="input-length">
+                    Input Words (approx)
+                    <InfoTooltip content="Average number of words in the user's messages. This is used to calculate token usage." />
+                  </Label>
+                  <Input
+                    id="input-length"
+                    type="number"
+                    min="1"
+                    value={inputLength}
+                    onChange={(e) => setInputLength(Math.max(1, parseInt(e.target.value) || 0))}
+                    className="w-full"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="output-length">
+                    Output Words (approx)
+                    <InfoTooltip content="Average number of words in the AI's responses. Output typically costs more than input." />
+                  </Label>
+                  <Input
+                    id="output-length"
+                    type="number"
+                    min="1"
+                    value={outputLength}
+                    onChange={(e) => setOutputLength(Math.max(1, parseInt(e.target.value) || 0))}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="context-window">
-                  Context Window
-                  <InfoTooltip content="The maximum number of tokens the model can process in a single conversation. Larger context windows allow for longer conversations but may affect pricing." />
+                  How much memory does the AI use per chat?
+                  <InfoTooltip content="This is the maximum length of the conversation the AI can remember. Larger values allow for longer conversations but may affect pricing." />
                 </Label>
                 <Select
                   value={contextWindow}
                   onValueChange={setContextWindow}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select context size" />
+                    <SelectValue placeholder="Select memory size" />
                   </SelectTrigger>
                   <SelectContent>
                     {contextWindowOptions.map((option) => (
-                      <SelectItem key={option.id} value={option.id}>{option.name}</SelectItem>
+                      <SelectItem key={option.id} value={option.id}>
+                        <div className="flex flex-col">
+                          <span>{option.name}</span>
+                          <span className="text-xs text-muted-foreground">{option.description}</span>
+                        </div>
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -208,19 +318,30 @@ const PricingCalculator: React.FC = () => {
         <CardHeader className="relative z-10">
           <CardTitle className="text-theme-blue-700">Your Results</CardTitle>
           <CardDescription>
-            Based on your inputs, here's what you can expect
+            Based on your inputs, here's what to expect
           </CardDescription>
         </CardHeader>
         <CardContent className="relative z-10 space-y-6">
           <div className="space-y-4">
             <div className="flex justify-between items-center py-3 border-b border-theme-blue-100">
-              <span className="text-sm font-medium">Total tokens used per month</span>
-              <span className="text-lg font-semibold">{totalTokensPerMonth.toLocaleString()}</span>
+              <span className="text-sm font-medium flex items-center">
+                <CircleInfo className="h-4 w-4 mr-1.5 text-theme-blue-500" />
+                You'll use around
+              </span>
+              <span className="text-lg font-semibold">
+                {totalTokensPerMonth > 1000000 
+                  ? `${(totalTokensPerMonth / 1000000).toFixed(1)} million` 
+                  : totalTokensPerMonth.toLocaleString()
+                } words (approx)
+              </span>
             </div>
             
             <div className="flex justify-between items-center py-3 border-b border-theme-blue-100">
-              <span className="text-sm font-medium">Estimated monthly cost</span>
-              <span className="text-lg font-semibold text-theme-blue-700">${monthlyCost.toFixed(2)}</span>
+              <span className="text-sm font-medium flex items-center">
+                <DollarSign className="h-4 w-4 mr-1.5 text-theme-blue-500" />
+                That will cost you around
+              </span>
+              <span className="text-lg font-semibold text-theme-blue-700">${monthlyCost.toFixed(2)}/month</span>
             </div>
             
             <div className="flex justify-between items-center py-3 border-b border-theme-blue-100">
@@ -230,10 +351,31 @@ const PricingCalculator: React.FC = () => {
             
             <div className="flex justify-between items-center py-3 border-b border-theme-blue-100">
               <div>
-                <span className="text-sm font-medium">Minimum price per user</span>
-                <InfoTooltip content="This is the minimum price you should charge per user to maintain a 40% profit margin." />
+                <span className="text-sm font-medium flex items-center">
+                  <Check className="h-4 w-4 mr-1.5 text-green-500" />
+                  You should charge at least
+                </span>
+                <span className="text-xs text-muted-foreground">to stay profitable</span>
               </div>
-              <span className="text-xl font-semibold text-theme-blue-600">${minimumPrice.toFixed(2)}</span>
+              <span className="text-xl font-semibold text-theme-blue-600">${minimumPrice.toFixed(2)}/user</span>
+            </div>
+            
+            <div className="flex justify-between items-center py-3 border-b border-theme-blue-100">
+              <span className="text-sm font-medium flex items-center">
+                <TrendingUp className="h-4 w-4 mr-1.5 text-theme-blue-500" />
+                You earn for every $1 spent
+              </span>
+              <span className="text-lg font-semibold text-green-600">
+                ${(1 + roi/100).toFixed(2)} (ROI: {Math.round(roi)}%)
+              </span>
+            </div>
+            
+            <div className="flex justify-between items-center py-3 border-b border-theme-blue-100">
+              <span className="text-sm font-medium flex items-center">
+                <BarChart2 className="h-4 w-4 mr-1.5 text-theme-blue-500" />
+                You break even with just
+              </span>
+              <span className="text-lg font-semibold">{breakEvenUsers} users</span>
             </div>
             
             <div className="mt-6 p-4 bg-theme-blue-50 rounded-lg">
@@ -248,19 +390,19 @@ const PricingCalculator: React.FC = () => {
                 </div>
                 <div>
                   <p className="font-medium text-foreground">{suggestedStrategy}</p>
-                  {suggestedStrategy === "Flat Rate" && (
+                  {suggestedStrategy === "Flat Pricing" && (
                     <p className="text-sm text-muted-foreground mt-1">
-                      Works best if your usage per user is predictable.
+                      Good if usage is predictable across your users.
                     </p>
                   )}
                   {suggestedStrategy === "Tiered Pricing" && (
                     <p className="text-sm text-muted-foreground mt-1">
-                      Works well when user behavior varies widely.
+                      Best if some users are light and others are heavy users.
                     </p>
                   )}
                   {suggestedStrategy === "Usage-based Pricing" && (
                     <p className="text-sm text-muted-foreground mt-1">
-                      Ideal for API-heavy platforms with variable usage patterns.
+                      Best if usage varies a lot between users and months.
                     </p>
                   )}
                 </div>

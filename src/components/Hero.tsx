@@ -18,11 +18,11 @@ const Hero: React.FC<HeroProps> = ({ onCalculatorClick }) => {
         </div>
         
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight bg-gradient-to-r from-theme-blue-700 via-theme-blue-600 to-theme-blue-500 bg-clip-text text-transparent">
-          Know Your Costs.<br/>Price Smartly.
+          Know Your AI Costs.<br/>Price Smartly.
         </h1>
         
         <p className="max-w-2xl mx-auto text-lg text-theme-gray-500 mt-6">
-          Estimate token usage, API costs, and break-even pricing for your AI-powered app in minutes.
+          Estimate your app's AI costs and what to charge, even if you're not technical.
         </p>
         
         <div className="mt-10">
@@ -31,7 +31,7 @@ const Hero: React.FC<HeroProps> = ({ onCalculatorClick }) => {
             onClick={onCalculatorClick}
             className="gradient-blue text-lg px-8 py-6 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
           >
-            Use the Calculator
+            Try the Calculator
           </Button>
         </div>
       </div>
