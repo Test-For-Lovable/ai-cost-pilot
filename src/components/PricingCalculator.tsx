@@ -324,7 +324,7 @@ const PricingCalculator: React.FC = () => {
           <div className="space-y-4">
             <div className="flex justify-between items-center py-3 border-b border-theme-blue-100">
               <span className="text-sm font-medium flex items-center">
-                <CircleInfo className="h-4 w-4 mr-1.5 text-theme-blue-500" />
+                <CircleHelp className="h-4 w-4 mr-1.5 text-theme-blue-500" />
                 You'll use around
               </span>
               <span className="text-lg font-semibold">
