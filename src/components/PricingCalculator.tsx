@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import InfoTooltip from './InfoTooltip';
 import { modelOptions, contextWindowOptions, ModelPricing, presetOptions, PresetOption } from '@/data/modelData';
-import { Calculator, Users, MessageSquare, CircleInfo, DollarSign, Check, TrendingUp, BarChart2, CircleDot } from 'lucide-react';
+import { Calculator, Users, MessageSquare, CircleHelp, DollarSign, Check, TrendingUp, BarChart2, CircleDot } from 'lucide-react';
 
 // Conversion factor from words to tokens (approximate)
 const WORDS_TO_TOKENS_FACTOR = 1.3;
