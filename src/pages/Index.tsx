@@ -15,7 +15,7 @@ const Index: React.FC = () => {
   
   return (
     <div className="flex flex-col min-h-screen">
-      <Header />
+      <Header showAdvancedLink={true} />
       
       <main className="flex-grow">
         <div className="container max-w-7xl mx-auto px-4 space-y-10 md:space-y-16">

@@ -1,8 +1,13 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  showAdvancedLink?: boolean;
+}
+
+const Header: React.FC<HeaderProps> = ({ showAdvancedLink = true }) => {
   const handleScrollToCalculator = () => {
     const calculatorSection = document.getElementById('calculator');
     if (calculatorSection) {
@@ -13,7 +18,9 @@ const Header: React.FC = () => {
   return (
     <header className="w-full py-4 px-4 md:px-6 flex items-center justify-between">
       <div className="flex items-center gap-2">
-        <h1 className="text-xl font-semibold text-theme-blue-600">AI Pricing Calculator</h1>
+        <Link to="/">
+          <h1 className="text-xl font-semibold text-theme-blue-600">AI Pricing Calculator</h1>
+        </Link>
       </div>
       <nav className="hidden md:flex items-center gap-6">
         <Button 
@@ -22,6 +29,26 @@ const Header: React.FC = () => {
         >
           Calculator
         </Button>
+        {showAdvancedLink && (
+          <Link to="/advanced">
+            <Button 
+              variant="ghost" 
+              className="text-theme-blue-600 hover:text-theme-blue-700"
+            >
+              Advanced Mode
+            </Button>
+          </Link>
+        )}
+        {!showAdvancedLink && (
+          <Link to="/">
+            <Button 
+              variant="ghost" 
+              className="text-theme-blue-600 hover:text-theme-blue-700"
+            >
+              Basic Mode
+            </Button>
+          </Link>
+        )}
         <Button 
           variant="ghost" 
           className="text-theme-blue-600 hover:text-theme-blue-700"
