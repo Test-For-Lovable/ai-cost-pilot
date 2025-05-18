@@ -1,5 +1,5 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
 import PricingCalculator from '@/components/PricingCalculator';
@@ -8,6 +8,7 @@ import Footer from '@/components/Footer';
 
 const Index: React.FC = () => {
   const calculatorRef = useRef<HTMLDivElement>(null);
+  const [emailSubmitted, setEmailSubmitted] = useState<boolean>(false);
   
   const scrollToCalculator = () => {
     calculatorRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -22,7 +23,7 @@ const Index: React.FC = () => {
           <Hero onCalculatorClick={scrollToCalculator} />
           
           <div id="calculator" ref={calculatorRef} className="scroll-mt-24">
-            <PricingCalculator />
+            <PricingCalculator emailSubmitted={emailSubmitted} setEmailSubmitted={setEmailSubmitted} />
           </div>
           
           <Testimonial />
